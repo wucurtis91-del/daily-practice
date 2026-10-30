@@ -1,0 +1,62 @@
+% stub.tex -- course-neutral stand-in for a real exam template, so that question
+% fragments can be compiled and checked on their own. Same macro names as the real
+% templates (templates/examples/*.sty); plain layout. \input it after \documentclass.
+% Needs XeLaTeX or LuaLaTeX (fontspec), e.g. tectonic -X compile standalone.tex.
+%
+%   \documentclass[11pt,a4paper]{article}
+%   \input{stub.tex}
+%   \begin{document} \input{question.tex} \end{document}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{fontspec}
+% \setmainfont{Arial}   % optional: the font of your real paper, if it is installed
+\usepackage{amsmath,amssymb}
+\usepackage[american,siunitx]{circuitikz}   % loads tikz and siunitx
+\usetikzlibrary{arrows.meta,calc}
+\usepackage{enumitem}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\pagestyle{plain}
+
+% notation: bold vectors, sans-serif components and matrices, sans-serif transpose
+\providecommand{\vect}[1]{\mathbf{#1}}
+\providecommand{\mat}[1]{\mathsf{#1}}
+\providecommand{\T}{^{\mathsf{T}}}
+
+\makeatletter
+% \begin{Question}{<number>}{<total marks>} ... \end{Question}: new page, heading, closing line.
+% \begin{Question}[continue]{..}{..} sets it on the same page (layout tests only).
+\newenvironment{Question}[3][]{%
+  \def\stub@tmp{#1}\def\stub@cont{continue}%
+  \ifx\stub@tmp\stub@cont\par\bigskip\else\clearpage\fi
+  \gdef\stub@qnum{#2}\gdef\stub@qtotal{#3}%
+  \noindent\textbf{Question #2}\par}
+ {\par\nobreak\noindent\hfill\textbf{[End of Question \stub@qnum; \stub@qtotal\ marks total]}\par}
+% parts (a), (b): \begin{Parts} \item ... \end{Parts};  sub-parts (i), (ii): \begin{SubParts} \item ... \end{SubParts}
+\newlist{Parts}{enumerate}{1}
+\setlist[Parts]{label=(\alph*), leftmargin=2.4em, itemsep=6pt}
+\newlist{SubParts}{enumerate}{1}
+\setlist[SubParts]{label=(\roman*), leftmargin=2.4em, itemsep=4pt}
+% \Marks{9}, \Marks{4, 5}, \Mark{1}: "[9 marks]" flush right at the end of the line
+% (on a line of its own when used between paragraphs); \Marks{1} prints "[1 mark]"
+\def\stub@one{1}
+\def\stub@putmarks#1{%
+  \ifvmode\noindent\hfill[#1]\par
+  \else{\unskip\nobreak\hfil\penalty50\hskip2em\hbox{}\nobreak\hfil[#1]%
+    \parfillskip=0pt\finalhyphendemerits=0\par}\fi}
+\newcommand{\Marks}[1]{\edef\stub@tmp{\zap@space#1 \@empty}%
+  \ifx\stub@tmp\stub@one\stub@putmarks{#1 mark}\else\stub@putmarks{#1 marks}\fi}
+\newcommand{\Mark}[1]{\stub@putmarks{#1 mark}}
+% \ExamFigure{<tikz/circuitikz picture>}{Q1.1} or \ExamFigure[<caption text>]{..}{Q1.1}
+\newcommand{\ExamFigure}[3][]{\par\begin{center}#2\par\vspace{4pt}%
+  Figure #3\if\relax\detokenize{#1}\relax\else: #1\fi\end{center}\par}
+% \AnswerSpace{<marks>}: blank, unbreakable writing space, 1.6 cm per mark, at least 4 cm,
+% at most 95% of the text height; "4, 5" is summed
+\newlength{\stub@ans}
+\newcommand{\AnswerSpace}[1]{\par\setlength{\stub@ans}{0pt}%
+  \@for\stub@m:=#1\do{\addtolength{\stub@ans}{\stub@m\dimexpr 1.6cm\relax}}%
+  \ifdim\stub@ans<4cm\setlength{\stub@ans}{4cm}\fi
+  \ifdim\stub@ans>0.95\textheight\setlength{\stub@ans}{0.95\textheight}\fi
+  \noindent\rule{0pt}{\stub@ans}\par}
+% \EndOfPaper{<text>}: closing line after the last question
+\newcommand{\EndOfPaper}[1]{\par\vspace{2em}{\centering\textbf{#1}\par}}
+\makeatother

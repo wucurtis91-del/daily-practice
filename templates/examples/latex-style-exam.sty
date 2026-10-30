@@ -1,0 +1,371 @@
+%% latex-style-exam.sty
+%% Exam-paper page layout in the style of a paper typeset with LaTeX (12pt article,
+%% Computer Modern Sans), for SELF-STUDY PRACTICE PAPERS.  Not an official
+%% examination template.  Example template of the daily-practice skill: copy it into
+%% your own templates folder, rename it after your course and adjust the measured
+%% values below to your own reference paper.
+%%
+%% Use with:   \documentclass[12pt,a4paper]{article}
+%%             \usepackage{latex-style-exam}        % option: answerframes
+%%             \ExamCourseCode{<course code>}       % header text, top right
+%%
+%% Every value below was measured from a reference paper
+%% (pdfTeX, 12pt article, CM Sans text, CM math):
+%%   A4; text block 18 cm wide starting 1in-1cm from the left edge; text height 670pt;
+%%   header baseline 61.27pt from the top, first text baseline 98.27pt (headsep 25pt,
+%%   topskip 12pt); footer baseline footskip = 30pt below the text block;
+%%   setspace stretch 1.25: baselineskip 18.125pt, display skips 15pt; parskip 7.25pt;
+%%   parts indented 2.5em(cmr12) = 29.375pt, sub-parts a further 25.85pt, labelsep 5.875pt.
+%% Text font: Latin Modern Sans (the OpenType form of Computer Modern Sans);
+%% math: the Computer Modern math fonts of the original.
+%%
+%% Macro interface (shared with the skill's templates/stub.tex):
+%%   \begin{Question}[continue]{<n>}{<total>} ... \end{Question}
+%%   \begin{Parts} \item ... \end{Parts}      (a), (b), ...
+%%   \begin{SubParts} \item ... \end{SubParts} (i), (ii), ...
+%%   \Marks{<n>}  \Mark{1}                    [n marks] flush right on the last line
+%%   \ExamFigure[<caption text>]{<picture>}{<label>}   "Figure <label>[: caption text]"
+%%   \AnswerSpace{<marks>}                    blank, unbreakable writing space
+%%   \EndOfPaper{<text>}                      closing line on the last page
+%%   \ExamCover{<time>}{<title>}{<date>}{<session>}{<instructions>}{<materials>}
+%%   \ExamCoverNote{<text>}                   own note at the foot of the cover (optional)
+%%   \ExamCourseCode{<text>}                  header text (preamble)
+%%   \vect{a}  \mat{A}  \T                    bold vector, sans matrix, sans transpose
+%% See latex-style-exam-USAGE.md for examples.
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{latex-style-exam}[2026/10/29 v1.1 LaTeX-style exam layout for self-study practice papers]
+
+\newif\ifMX@frames
+\DeclareOption{answerframes}{\MX@framestrue}
+\DeclareOption*{\PackageWarning{latex-style-exam}{Unknown option `\CurrentOption' ignored}}
+\ProcessOptions\relax
+
+%% ---------------------------------------------------------------- class check
+\@ifclassloaded{article}{%
+  \ifnum0\@ptsize=\tw@\else
+    \PackageError{latex-style-exam}%
+      {Load the class as \protect\documentclass[12pt,a4paper]{article}}%
+      {The reference paper is a 12pt LaTeX document; every spacing in this
+       package assumes 12pt.}%
+  \fi}{%
+  \PackageWarningNoLine{latex-style-exam}{This layout is calibrated for
+    \protect\documentclass[12pt,a4paper]{article}}}
+
+%% ---------------------------------------------------------------- packages
+\RequirePackage[a4paper,
+  textwidth=18cm, textheight=670pt,
+  left=43.817pt,            % 1in - 1cm
+  top=86.27pt,              % 1in + 14pt
+  headheight=12pt, headsep=25pt, footskip=30pt]{geometry}
+\RequirePackage{amsmath}
+\RequirePackage{amssymb}
+\RequirePackage{tikz}
+\RequirePackage[american,siunitx]{circuitikz}   % circuit figures (loads siunitx)
+\RequirePackage{setspace}
+\RequirePackage{ragged2e}
+
+%% ---------------------------------------------------------------- text
+\renewcommand\familydefault{\sfdefault}   % TU/lmss = Computer Modern Sans
+% The reference paper uses setspace with stretch 1.25: 18.125pt baselines and display skips of
+% 1.25 x 12pt = 15pt (33.00bp from a text baseline to a one-line display and back).
+\setstretch{1.25}
+% ... and ragged2e's \RaggedRight: interword spaces fixed at their natural width,
+% right margin ragged by up to 2em (of the 12pt CM font: 23.5pt), hyphenation on.
+\setlength\RaggedRightRightskip{\z@ \@plus 23.5\p@}
+\RaggedRight
+\setlength\parindent{\z@}
+\setlength\parskip{7.25\p@ \@plus 2\p@}
+\raggedbottom
+\newskip\MX@docparskip
+\MX@docparskip=\parskip
+
+%% notation of the course notes: bold vectors, sans-serif components and matrices
+\DeclareRobustCommand\vect[1]{\mathbf{#1}}
+\DeclareRobustCommand\mat[1]{\mathsf{#1}}
+\DeclareRobustCommand\T{^{\mathsf{T}}}
+
+%% ---------------------------------------------------------------- page count
+%% \MX@lastpage is written to the .aux file; two passes give "Page X of N".
+\providecommand\MX@lastpage{0}
+\AtEndDocument{%
+  \clearpage
+  \if@filesw
+    \immediate\write\@auxout{\gdef\string\MX@lastpage{\the\numexpr\c@page-\@ne\relax}}%
+  \fi}
+\def\MX@total{\ifnum\MX@lastpage>\z@ \MX@lastpage\else ??\fi}
+\def\MX@pagetext{Page \thepage\ of \MX@total}
+
+%% ---------------------------------------------------------------- header / footer
+\def\MX@course{COURSE CODE}
+% \ExamCourseCode{<text>} (preamble): the course code printed flush right in the header
+\newcommand\ExamCourseCode[1]{\gdef\MX@course{#1}}
+\def\MX@covernote{Self-study practice paper \textendash\ not an official examination}
+\let\MX@endtext\@empty
+
+\def\MX@head{\hfil\textbf{\MX@course}}
+
+% zero-height box, so the footer baseline is always exactly \footskip below the text
+\def\MX@zero#1{\setbox\z@\hbox{#1}\ht\z@\z@\dp\z@\z@\box\z@}
+
+% "Page X of N" centred on the text block, #1 flush right
+\def\MX@pageline#1{\rlap{\hb@xt@\textwidth{\hfil\MX@pagetext\hfil}}\hfil#1}
+
+% two-line footer of the cover and last page of the reference paper: the box sits on the
+% bottom of the text block, so line 1 has its baseline (height of line 1) below the
+% text block and the page line follows 30pt lower.
+\def\MX@twolinefoot#1#2{%
+  \setbox\@tempboxa\hb@xt@\textwidth{#1}%
+  \@tempdima\ht\@tempboxa
+  \rlap{\raise\dimexpr\footskip-\@tempdima\relax\box\@tempboxa}%
+  \rlap{\lower\@tempdima\hb@xt@\textwidth{\MX@pageline{#2}}}%
+  \hfil}
+
+\def\MX@iflast{\ifnum\c@page=\MX@lastpage\relax}
+
+\def\MX@foot{%
+  \MX@iflast
+    \ifx\MX@endtext\@empty
+      \MX@pageline{}%
+    \else
+      \MX@twolinefoot{\hfil\textbf{\MX@endtext}\hfil}{}%
+    \fi
+  \else
+    \MX@pageline{P.T.O.}%
+  \fi}
+
+% Cover form of \MX@twolinefoot: #1 is set bold, centred and single spaced (14.5pt
+% baselines) across \textwidth, so a long note wraps (or breaks at \\).  The LAST line
+% is placed exactly like line 1 of \MX@twolinefoot (box top on the bottom of the text
+% block), so a one-line note sits where the copyright line is and earlier lines go
+% upwards; the page line keeps its place 30pt below the last line.
+\newdimen\MX@notelastht
+\def\MX@notefoot#1#2{%
+  \setbox\@tempboxa\vbox{\hsize\textwidth \linespread{1}\selectfont \bfseries
+    \parskip\z@skip \centering #1\par}%
+  \setbox\z@\vbox{\unvcopy\@tempboxa \setbox\z@\lastbox \global\MX@notelastht\ht\z@}%
+  \rlap{\raise\dimexpr\footskip-\MX@notelastht\relax\box\@tempboxa}%
+  \rlap{\lower\MX@notelastht\hb@xt@\textwidth{\MX@pageline{#2}}}%
+  \hfil}
+
+% the cover's "P.T.O." stops one interword space short of the margin, as in the paper
+\def\MX@coverfoot{%
+  \MX@notefoot{\MX@covernote}%
+    {\MX@iflast\else P.T.O.\kern\fontdimen\tw@\font\fi}}
+
+% \ExamCoverNote{<text>} (preamble, or before \ExamCover): replaces the default note
+% "Self-study practice paper - not an official examination" at the foot of the cover.
+\newcommand\ExamCoverNote[1]{\gdef\MX@covernote{#1}}
+
+\def\ps@MXplain{%
+  \def\@oddhead{\MX@head}\let\@evenhead\@oddhead
+  \def\@oddfoot{\MX@zero{\hb@xt@\textwidth{\MX@foot}}}\let\@evenfoot\@oddfoot}
+\def\ps@MXcover{%
+  \def\@oddhead{\MX@head}\let\@evenhead\@oddhead
+  \def\@oddfoot{\MX@zero{\hb@xt@\textwidth{\MX@coverfoot}}}\let\@evenfoot\@oddfoot}
+\pagestyle{MXplain}
+
+%% ---------------------------------------------------------------- questions
+%% \begin{Question}{1}{10}: new page, bold "1." heading (text may follow on the line),
+%% closing line "[End of Question 1; 10 marks total]" bold, flush right (one interword
+%% space short of the margin, as printed in the paper).
+%% \begin{Question}[continue]{2}{10}: no page break; the question follows the previous
+%% one after \ExamContinueSkip (default one blank line, the usual gap in the paper).
+\newlength\ExamContinueSkip
+\setlength\ExamContinueSkip{18.125\p@}
+% the end line stops one interword space (3.91pt) short of the margin, as printed;
+% set to 0pt for an end line exactly at the margin
+\newlength\ExamEndLineInset
+\setlength\ExamEndLineInset{3.91\p@}
+\def\MX@continue{continue}
+\def\MX@one{1}
+\newenvironment{Question}[3][]{%
+  \def\MX@tmp{#1}%
+  \ifx\MX@tmp\MX@continue
+    \par\vskip\ExamContinueSkip
+  \else
+    \clearpage
+  \fi
+  \gdef\MX@qnum{#2}\gdef\MX@qtotal{#3}%
+  \noindent\textbf{#2.\ }\ignorespaces
+}{%
+  \par\nobreak
+  \noindent\hfill
+  \textbf{[End of Question \MX@qnum; \MX@qtotal\
+    \ifx\MX@qtotal\MX@one mark\else marks\fi\ total]}%
+  \kern\ExamEndLineInset
+  \par}
+
+%% ---------------------------------------------------------------- parts
+\newcounter{MXpart}
+\newcounter{MXsubpart}
+\def\MX@listsetup{%
+  \setlength\labelsep{5.875\p@}%
+  \setlength\labelwidth{\dimexpr\leftmargin-\labelsep\relax}%
+  \setlength\itemindent\z@
+  \setlength\listparindent\z@
+  \setlength\rightmargin\z@
+  \setlength\topsep\z@
+  \setlength\partopsep\z@
+  \setlength\itemsep\z@
+  \setlength\parsep{7.25\p@ \@plus 2\p@}}
+% Page breaks: the preferred break is before the second and later items (a \filbreak:
+% \vfil\penalty-51\vfilneg), so a part moves to the next page together with its
+% answer space and the blank left at the foot of the page goes to the writing room of
+% the parts above it (shared by the fill glue of \AnswerSpace).  No break between a
+% list's lead-in text and its first item, nor between the last item and the end line.
+% If a single part is taller than a page, TeX falls back to breaking before its answer
+% space.
+\let\MX@origitem\item
+\def\MX@itembreak{%
+  \if@newlist\else
+    \ifhmode\unskip\par\fi
+    \vfil\penalty-\@lowpenalty\vfilneg
+  \fi}
+\def\MX@listpenalties{%
+  \@beginparpenalty\@M \@endparpenalty\@M \@itempenalty\@M
+  \def\item{\MX@itembreak\MX@origitem}}
+\newenvironment{Parts}{%
+  \list{(\alph{MXpart})}{\usecounter{MXpart}\setlength\leftmargin{29.375\p@}\MX@listsetup}%
+  \MX@listpenalties
+}{\endlist}
+\newenvironment{SubParts}{%
+  \list{(\roman{MXsubpart})}{\usecounter{MXsubpart}\setlength\leftmargin{25.85\p@}\MX@listsetup}%
+  \MX@listpenalties
+}{\endlist}
+
+%% ---------------------------------------------------------------- marks
+%% "[2 marks]" flush right at the end of the last line of the part.  As in the paper,
+%% the marks are a line of their own pulled up by 0.7cm, so they sit 1.79pt above the
+%% baseline of the last text line (lower after a deep line, e.g. one with a \dfrac)
+%% and the next item is spaced from the marks line.  The paragraph first reserves the
+%% width of the marks at the end of its last line; if that line is full, the reserved
+%% space starts a new line and the marks appear there.
+\newdimen\MX@marksback
+\MX@marksback=0.7cm
+\newbox\MX@marksbox
+\def\MX@putmarks#1{%
+  \setbox\MX@marksbox\hbox{[#1]}%
+  \ifvmode
+    \noindent\hfill\box\MX@marksbox\par
+  \else
+    {\unskip\nobreak\hfil\penalty50\hskip2em\hbox{}\nobreak\hfil
+     \hb@xt@\wd\MX@marksbox{}%
+     \parfillskip\z@skip \finalhyphendemerits\z@ \par}%
+    \nobreak
+    \vskip-\MX@marksback
+    \hb@xt@\hsize{\hfil\box\MX@marksbox}%
+  \fi}
+\newcommand\Marks[1]{%
+  \def\MX@tmp{#1}%
+  \ifx\MX@tmp\MX@one \MX@putmarks{#1 mark}\else\MX@putmarks{#1 marks}\fi}
+\newcommand\Mark[1]{\MX@putmarks{#1 mark}}
+
+%% ---------------------------------------------------------------- answer space
+%% \AnswerSpace{3}: 1.6cm per mark, at least 4cm, at most 0.95\textheight; one box,
+%% so it is never split and moves to the next page as a whole.  "4, 5" is summed.
+%% The box is followed by unbreakable glue of <marks>fill stretch, so whatever blank a
+%% page has left is shared out among the answer spaces on that page in proportion to
+%% their marks (the last page of a question is filled down to its end line) instead of
+%% lying unused below the end line.  Pages without answer spaces stay ragged.
+\newdimen\MX@ansh
+\newdimen\MX@ansk
+\newcommand\AnswerSpace[1]{%
+  \par
+  \MX@ansh\z@ \MX@ansk\z@
+  \@for\MX@tmp:=#1\do{\advance\MX@ansh\MX@tmp\dimexpr1.6cm\relax
+    \advance\MX@ansk\MX@tmp\p@}%
+  \ifdim\MX@ansh<4cm \MX@ansh4cm\fi
+  \ifdim\MX@ansh>.95\textheight \MX@ansh.95\textheight\fi
+  \penalty\z@
+  \ifMX@frames   % debugging aid: thin grey outline of the reserved space
+    \moveright\@totalleftmargin\vbox to\MX@ansh{%
+      \kern4\p@
+      \hb@xt@\linewidth{\color{black!30}%
+        \vbox to\dimexpr\MX@ansh-4\p@\relax{%
+          \hrule\@height.3\p@\@width\linewidth
+          \hb@xt@\linewidth{\vrule\@width.3\p@\@height\dimexpr\MX@ansh-4.6\p@\relax
+            \hfil\vrule\@width.3\p@}%
+          \hrule\@height.3\p@\@width\linewidth}\hss}%
+      \vss}%
+  \else
+    \vbox to\MX@ansh{\vfil}%
+  \fi
+  \nobreak
+  \vskip\z@\@plus\strip@pt\MX@ansk fill\relax}
+
+%% ---------------------------------------------------------------- figures
+%% \ExamFigure[<caption text>]{<picture>}{Q1.1}: picture centred on the text block,
+%% caption "Figure Q1.1" (": caption text" when given) centred below it, single spaced.
+%% Spacing as for a figure measured on a reference paper: picture top 14.03pt below the previous
+%% baseline, caption baseline 24.5pt below the picture, next baseline 29.84pt lower.
+\newcommand\ExamFigure[3][]{%
+  \par
+  \ifdim\prevdepth>-\@m\p@ \vskip\dimexpr14.03\p@-\prevdepth\relax
+  \else \vskip14.03\p@ \fi
+  \nointerlineskip
+  \hb@xt@\textwidth{\hss#2\hss}%
+  \setbox\@tempboxa\vtop{\hsize\textwidth \linespread{1}\selectfont
+    \leftskip\z@\@plus.5\textwidth \rightskip\leftskip
+    \parfillskip\z@skip \parindent\z@
+    \noindent Figure #3\if\relax\detokenize{#1}\relax\else: #1\fi\par}%
+  \nobreak
+  \nointerlineskip
+  \vskip\dimexpr24.5\p@-\ht\@tempboxa\relax
+  \box\@tempboxa
+  \kern4.47\p@}
+
+%% ---------------------------------------------------------------- end of paper
+%% \EndOfPaper{End of Practice Paper}: printed bold and centred just below the text
+%% block of the last page, above "Page N of N", as "End of Examination Paper" is.
+\newcommand\EndOfPaper[1]{%
+  \par\gdef\MX@endtext{#1}%
+  \nobreak\vbox to12\p@{}}
+
+%% ---------------------------------------------------------------- cover
+%% \ExamCover{<suggested time>}{<course title>}{<date line>}{<session line>}%
+%%           {<instruction paragraphs>}{<\item list of permitted materials>}
+%% Lines are placed at the baselines of the reference cover.  The institution line is
+%% replaced by "Self-Study Practice Paper", the copyright line by \MX@covernote.
+\newcount\MX@instcount
+\def\MX@vput#1#2{%
+  \nointerlineskip\vskip#1\relax
+  \setbox\z@\hb@xt@\hsize{#2}\ht\z@\z@\dp\z@\z@\box\z@}
+\newenvironment{MX@materials}{%
+  \list{\ensuremath{\bullet}}{\setlength\leftmargin{29.375\p@}\MX@listsetup}}{\endlist}
+\newcommand\ExamCover[6]{%
+  \thispagestyle{MXcover}%
+  \par
+  \begingroup
+    \vbox{}%                                  reference: baseline 12pt below the text top
+    \MX@vput{-28.89bp}{\hfil{\large\bfseries #1}\hfil}%
+    \MX@vput{28.89bp}{\hfil{\bfseries Self-Study Practice Paper}\hfil}%
+    \MX@vput{28.90bp}{\hfil{\LARGE\bfseries #2}\hfil}%
+    \if\relax\detokenize{#3}\relax\else\MX@vput{28.89bp}{\hfil{\bfseries #3}\hfil}\fi
+    \if\relax\detokenize{#4}\relax\else\MX@vput{23.47bp}{\hfil{\bfseries #4}\hfil}\fi
+    \nointerlineskip\vskip23.08bp
+    \hrule\@height.4\p@
+    \MX@vput{30.69bp}{{\bfseries Instructions for candidates}\hfil}%
+    \parskip\z@skip
+    \vskip5.44\p@
+    % the paper separates the first two instructions by \parskip and the others by
+    % \\[0.3cm]: reproduced by the paragraph count below
+    \global\MX@instcount\z@
+    \everypar{\global\advance\MX@instcount\@ne
+      \ifnum\MX@instcount=\@ne \global\parskip7.25\p@\else\global\parskip.3cm\fi}%
+    #5\par
+    \everypar{}%
+    \ifdim\prevdepth>-\@m\p@ \vskip\dimexpr23.08bp-\prevdepth\relax
+    \else\vskip23.08bp\fi
+    \hrule\@height.4\p@
+    \if\relax\detokenize{#6}\relax\else
+      \MX@vput{30.69bp}{{\bfseries Additional permitted materials}\hfil}%
+      \global\parskip5.44\p@
+      \begin{MX@materials}#6\end{MX@materials}%
+      \vskip\dimexpr30.29bp-\prevdepth\relax
+      \hrule\@height.4\p@
+    \fi
+  \endgroup
+  \global\parskip\MX@docparskip
+  \clearpage}
+
+\endinput

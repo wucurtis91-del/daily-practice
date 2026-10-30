@@ -1,0 +1,25 @@
+%% Paper skeleton for build_paper.py (example: word-style-exam.sty).
+%% build_paper.py fills the placeholders with Python %%-formatting, so every literal
+%% percent sign in this file is written twice.  Placeholders:
+%%   %%(note)s %%(time)s %%(date_upper)s %%(date_title)s %%(session)s %%(instructions)s
+%%   %%(inputs)s %%(end_text)s, and optionally %%(code)s %%(title)s %%(title_upper)s
+\documentclass{article}
+\usepackage{word-style-exam}
+\ExamCourseCode{%(code)s}
+\renewcommand\ExamCoverNote{%(note)s\par
+  Not an official examination.}
+
+\begin{document}
+
+\ExamCover
+  {%(time)s}
+  {%(title_upper)s}
+  {%(date_upper)s}
+  {%(session)s}
+  {%(instructions)s}
+
+%(inputs)s
+
+\EndOfPaper{%(end_text)s}
+
+\end{document}

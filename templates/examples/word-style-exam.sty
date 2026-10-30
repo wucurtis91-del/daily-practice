@@ -1,0 +1,404 @@
+% word-style-exam.sty -- exam-paper page layout in the style of a paper made in
+% Word (Arial 12, 1.5 lines), for daily SELF-STUDY practice papers.
+% Example template of the daily-practice skill: copy it into your own
+% templates folder, rename it after your course and adjust the measured
+% values below to your own reference paper.
+%
+% Engine: XeLaTeX or LuaLaTeX (fontspec + Arial). Compile twice (tectonic does
+% this by itself) so that the footer "X of N" knows N.
+%
+% The dimensions below were measured on a reference PDF (A4, 1 bp = 1/72 in,
+% which is Word's "pt"):
+%   left text edge 72 bp, right text edge 528 bp  (text width 456 bp)
+%   course code      : Arial Bold 12, flush right, baseline  47.28 bp from top
+%   question heading : Arial Bold 12, flush left,  baseline  83.30 bp
+%   first body line  : baseline 110.90 bp (109.94 bp under "Question N continued.")
+%   body             : Arial 12, 1.5 lines (20.7 bp), 6 bp after each paragraph
+%   footer "X of N"  : Arial 12, centred on the text width, baseline 790.68 bp
+%   parts            : label at the margin, text 28.32 bp (1 cm) in; sub-parts a
+%                      further 28.32 bp in; 12 bp extra around sub-parts
+%   marks            : Arial Bold, flush right, own line, after the whole part
+%   figures          : picture top 15.43 bp below the previous baseline, caption
+%                      "Figure Qn.m" (regular) 24.2 bp below the picture, both
+%                      centred on the part's text block; one blank line follows
+%
+% Macro interface (identical to the skill's templates/stub.tex):
+%   \begin{Question}{<n>}{<total>} ... \end{Question}
+%   \begin{Parts} \item ... \end{Parts}      (a), (b), ...
+%   \begin{SubParts} \item ... \end{SubParts} (i), (ii), ...
+%   \Marks{9}  \Marks{4, 5}  \Mark{1}
+%   \ExamFigure{<tikz/circuitikz picture or \includegraphics>}{Q1.1}
+%   \AnswerSpace{<marks>}
+%   \EndOfPaper{<text>}
+%   \ExamCover{<suggested time>}{<course title>}{<date>}{<session>}{<instructions>}
+%   \ExamCourseCode{<header text>}   (preamble; the course code printed top right)
+% See word-style-exam-USAGE.md for examples.
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{word-style-exam}[2026/10/29 v1.1 Word-style self-study practice paper layout]
+
+\RequirePackage{iftex}
+\ifXeTeX\else\ifLuaTeX\else
+  \PackageError{word-style-exam}{This package needs XeLaTeX or LuaLaTeX (fontspec, Arial)}
+    {Compile with tectonic, xelatex or lualatex.}%
+\fi\fi
+
+% ---------------------------------------------------------------- packages
+\RequirePackage{amsmath,amssymb}
+\RequirePackage{lmodern}                 % scalable maths symbol fonts
+\RequirePackage[no-math]{fontspec}
+\setmainfont{Arial}[Kerning=Off, WordSpace={1,0,0}]   % Word: no kerning, no
+\setsansfont{Arial}[Kerning=Off, WordSpace={1,0,0}]   % stretching of spaces
+% Letters, digits and + = ( ) in maths come from Arial, upright, as in the
+% MathType objects of a Word paper (R_L, V_X, v_C(0^+)); Greek and other
+% symbols stay Latin Modern.
+\RequirePackage[defaultmathsizes]{mathastext}
+\RequirePackage[american,siunitx]{circuitikz}
+\usetikzlibrary{arrows.meta,calc}
+% units as typed in a Word paper: "25 W", "1.2 °C/W" (full space, slash)
+\sisetup{quantity-product=\text{ }, per-mode=symbol}
+\DeclareSIUnit\degree{\text{\char"00B0}}
+\DeclareSIUnit\degreeCelsius{\text{\char"00B0}C}
+\DeclareSIUnit\celsius{\text{\char"00B0}C}
+\RequirePackage{enumitem}
+\RequirePackage[a4paper,
+  left=72bp, textwidth=456bp,
+  top=99.65bp, textheight=637.27bp,       % body: first baseline 110.90 bp
+  headheight=50bp, headsep=16.35bp,       % head baseline = question heading 83.30 bp
+  footskip=53.76bp]{geometry}             % foot baseline 790.68 bp
+
+% ---------------------------------------------------------------- fonts and paragraphs
+\renewcommand\normalsize{%
+  \@setfontsize\normalsize{12bp}{20.7bp}%
+  \abovedisplayskip 6bp \belowdisplayskip 6bp
+  \abovedisplayshortskip 6bp \belowdisplayshortskip 6bp
+  \let\@listi\@listI}
+\normalsize
+% subscripts as in the MathType objects of the paper: 6.9 pt subscript set
+% 3.15 pt below the baseline (R_L, V_X)
+\DeclareMathSizes{12.045}{12.045}{7}{5}
+\AtBeginDocument{\begingroup\normalsize\check@mathfonts
+  \fontdimen16\textfont2=3.15bp \fontdimen17\textfont2=3.15bp \endgroup}
+\setlength\parindent{0pt}
+\setlength\parskip{6bp}
+\setlength\topskip{11.25bp}
+\setlength\maxdepth{5bp}
+\setlength\lineskip{1bp}
+\setlength\lineskiplimit{0pt}
+\frenchspacing
+\raggedright
+\hyphenpenalty=10000 \exhyphenpenalty=50 \uchyph=0
+% Word keeps every paragraph on one page; pages break between paragraphs,
+% parts, figures and answer spaces only
+\interlinepenalty=10000 \clubpenalty=10000 \@clubpenalty=10000 \widowpenalty=10000
+\displaywidowpenalty=10000 \postdisplaypenalty=10000 \brokenpenalty=10000
+\emergencystretch=0pt
+
+% ---------------------------------------------------------------- user settings
+\newcommand*\wsx@code{COURSE CODE}
+\newcommand*\ExamCourseCode[1]{\renewcommand*\wsx@code{#1}}
+\newcommand*\ExamCoverNote{Self-study practice paper -- not an official examination}
+\newif\ifwsx@showanswer
+\newcommand*\ExamShowAnswerSpaces{\wsx@showanswertrue}
+
+% ---------------------------------------------------------------- measured constants
+\newdimen\wsx@texttop      \wsx@texttop=99.65bp   % top of the body box
+\newdimen\wsx@contshift    \wsx@contshift=0.96bp  % body is higher under "continued."
+\newdimen\wsx@contgap      \wsx@contgap=26.76bp   % last baseline -> "continues" line
+\newdimen\wsx@contmin      \wsx@contmin=725.40bp  % never higher than on the reference p. 2
+\newdimen\wsx@contbase     \wsx@contbase=\wsx@contmin
+\newdimen\wsx@footbase     \wsx@footbase=790.68bp
+\newdimen\wsx@objgap       \wsx@objgap=15.43bp    % previous baseline -> picture top
+\newdimen\wsx@capgap       \wsx@capgap=24.2bp     % picture bottom -> caption baseline
+\newdimen\wsx@blankline    \wsx@blankline=26.7bp  % one empty 1.5-spaced paragraph
+\newdimen\wsx@partindent   \wsx@partindent=28.32bp
+\newdimen\wsx@figleft
+\newdimen\wsx@figwidth
+\newdimen\wsx@anslen
+\newbox\wsx@figbox
+\newbox\wsx@capbox
+\newdimen\wsx@partstart  % \pagetotal when the current part began
+\newcount\wsx@partpage   % ... and how many pages had been built then
+\newcount\wsx@pagesbuilt
+
+% ---------------------------------------------------------------- marks: is a question open?
+% TeX's \mark carries the number of the open question (empty = none):
+% \topmark = state at the top of the page, \firstmark = first change on the
+% page, \botmark = state at the bottom.  Single pass and exact.  (e-TeX mark
+% classes are not used: several class numbers are broken in this XeTeX build.)
+% The payload is wrapped in \wsx@qmark so that a foreign \mark (e.g. from
+% \markboth) reads as "no question".
+\def\wsx@qmark#1{}
+\newcommand*\wsx@setmark[1]{\mark{\noexpand\wsx@qmark{#1}}}
+\def\wsx@getq#1\wsx@qmark#2#3\wsx@stop{#2}
+\def\wsx@readmark#1#2{% #1 = \topmark/\firstmark/\botmark, #2 = macro to define
+  \edef#2{\expandafter\wsx@getq#1\wsx@qmark{}\wsx@stop}}
+
+% ---------------------------------------------------------------- page style
+\def\wsx@ifempty#1{\ifx#1\@empty\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi}
+\def\wsx@head{%
+  \wsx@readmark\topmark\wsx@m@top
+  \wsx@readmark\firstmark\wsx@m@first
+  \rlap{\bfseries
+    \wsx@ifempty\wsx@m@top
+      {\wsx@ifempty\wsx@m@first{}{Question \wsx@m@first}}%
+      {Question \wsx@m@top\ continued.}}%
+  \hfil
+  \llap{\smash{\raise\dimexpr 83.30bp-47.28bp\relax\hbox{\bfseries\wsx@code}}}}
+\def\wsx@foot{%
+  \wsx@readmark\botmark\wsx@m@bot
+  \wsx@ifempty\wsx@m@bot{}%
+    {\rlap{\smash{\raise\dimexpr\wsx@footbase-\wsx@contbase\relax
+       \hbox{\bfseries Question \wsx@m@bot\ continues over the page.}}}}%
+  \hfil\thepage\ of \wsx@lastpage\hfil}
+\def\ps@wsxexam{%
+  \let\@mkboth\@gobbletwo
+  \def\@oddhead{\wsx@head}\def\@oddfoot{\wsx@foot}%
+  \let\@evenhead\@oddhead\let\@evenfoot\@oddfoot}
+\pagestyle{wsxexam}
+
+% total number of pages, written after the last page has been shipped out
+\providecommand*\wsx@lastpage{??}
+\AddToHook{enddocument/afterlastpage}{%
+  \if@filesw
+    \immediate\write\@auxout{\gdef\string\wsx@lastpage{\the\numexpr\value{page}-1\relax}}%
+  \fi}
+
+% ---------------------------------------------------------------- output routine hooks
+% Ragged bottom (Word fills pages from the top).  On a "continued" page the
+% body starts 0.96 bp higher, as in the reference paper.
+\def\@textbottom{\vskip\z@\@plus.0001fil}
+\def\@texttop{%
+  \wsx@readmark\topmark\wsx@m@top
+  \wsx@ifempty\wsx@m@top{}{\kern-\wsx@contshift}}
+% Before LaTeX builds the page, measure where its last baseline is: the
+% "Question N continues over the page." line goes one paragraph below it
+% (26.76 bp), but never higher than 725.40 bp (its place on the reference page 2).
+\def\wsx@strip{\unskip\unpenalty\unkern\unskip\unpenalty\unkern
+  \unskip\unpenalty\unkern\unskip\unpenalty\unkern}
+\let\wsx@orig@makecol\@makecol
+\def\@makecol{\wsx@measurepage\wsx@orig@makecol}
+\def\wsx@measurepage{%
+  \global\advance\wsx@pagesbuilt\@ne
+  \begingroup
+    \setbox\z@\vbox{\unvcopy\@cclv\wsx@strip}%
+    \dimen@\dimexpr\wsx@texttop+\ht\z@+\wsx@contgap\relax
+    \wsx@readmark\topmark\wsx@m@top
+    \wsx@ifempty\wsx@m@top{}{\advance\dimen@-\wsx@contshift}%
+    \ifdim\dimen@<\wsx@contmin \dimen@\wsx@contmin \fi
+    \global\wsx@contbase\dimen@
+  \endgroup}
+
+% ---------------------------------------------------------------- Question
+\newcommand*\wsx@qnum{}
+\newcommand*\wsx@qtotal{}
+\newenvironment{Question}[2]{%
+  \clearpage
+  \gdef\wsx@qnum{#1}\gdef\wsx@qtotal{#2}%
+  \wsx@setmark{#1}%
+  \ignorespaces}
+ {\par
+  \nobreak
+  \noindent\hspace*{\fill}\textbf{Total [\wsx@qtotal\ marks]}\par
+  \wsx@setmark{}}%
+
+% ---------------------------------------------------------------- Parts and SubParts
+% signature kerns left after a caption / an answer space (see \ExamFigure, \AnswerSpace)
+\def\wsx@capsig{\kern 3sp\relax}
+\def\wsx@anssig{\kern 5sp\relax}
+\newif\ifwsx@afteranswer
+\def\wsx@checkafteranswer{%
+  \ifvmode\ifdim\lastkern=5sp \wsx@afteranswertrue\else\wsx@afteranswerfalse\fi
+  \else\wsx@afteranswerfalse\fi}
+
+\newcount\wsx@partsdepth
+\newlist{wsx@Parts}{enumerate}{1}
+\setlist[wsx@Parts]{label=(\alph*), ref=(\alph*), align=left,
+  leftmargin=28.32bp, labelwidth=28.32bp, labelsep=0pt, itemindent=0pt,
+  topsep=0pt, partopsep=0pt, parsep=6bp, itemsep=26.7bp,
+  beginpenalty=0, midpenalty=0, endpenalty=10000}
+\newlist{wsx@SubParts}{enumerate}{1}
+\setlist[wsx@SubParts]{label=(\roman*), ref=(\roman*), align=left,
+  leftmargin=28.32bp, labelwidth=28.32bp, labelsep=0pt, itemindent=0pt,
+  topsep=6bp, partopsep=0pt, parsep=6bp, itemsep=6bp,
+  beginpenalty=10000, midpenalty=10000, endpenalty=10000}
+\let\wsx@origitem\item
+% A part that follows an answer space starts one blank line earlier (the
+% answer space is the blank); a page break is always allowed after an answer space.
+% The page position where the part starts is remembered, so that its figure and
+% answer space can be kept on the same page as its text (see \wsx@keepwithpart).
+\def\wsx@partitem{%
+  \wsx@checkafteranswer
+  \ifwsx@afteranswer\itemsep\z@\else\itemsep\wsx@blankline\fi
+  \@ifnextchar[\wsx@partitem@opt\wsx@partitem@noopt}
+\def\wsx@partitem@opt[#1]{\wsx@origitem[#1]\wsx@partsnapshot}
+\def\wsx@partitem@noopt{\wsx@origitem\wsx@partsnapshot}
+% taken after \@item has added its penalty, i.e. after TeX has shipped any
+% page that the previous part completed
+\def\wsx@partsnapshot{%
+  \global\wsx@partstart\pagetotal
+  \global\wsx@partpage\wsx@pagesbuilt}
+\def\wsx@subitem{%
+  \wsx@checkafteranswer
+  \ifwsx@afteranswer\itemsep\z@\@itempenalty\z@
+  \else\itemsep 6bp\@itempenalty\@M\fi
+  \wsx@origitem}
+\newenvironment{Parts}
+ {\begin{wsx@Parts}\advance\wsx@partsdepth\@ne\let\item\wsx@partitem}
+ {\end{wsx@Parts}}
+\newenvironment{SubParts}
+ {\begin{wsx@SubParts}\let\item\wsx@subitem}
+ {\end{wsx@SubParts}}
+
+% ---------------------------------------------------------------- marks
+\def\wsx@marksline#1{%
+  \par\nobreak
+  \noindent\hspace*{\fill}\textbf{#1}\par}
+\newcommand*\Marks[1]{%
+  \edef\wsx@tmp{\zap@space#1 \@empty}\def\wsx@one{1}%
+  \ifx\wsx@tmp\wsx@one\wsx@marksline{[#1 mark]}\else\wsx@marksline{[#1 marks]}\fi}
+\newcommand*\Mark[1]{\wsx@marksline{[#1 mark]}}
+
+% \wsx@keepwithpart{<height of what follows>}: forbid a page break before the
+% next object if the part (from its label to the end of that object) fits on a
+% page; TeX then moves the whole part to the next page instead of leaving its
+% text behind.  Parts too tall for one page keep the break.
+\def\wsx@keepwithpart#1{%
+  \ifnum\wsx@partsdepth>\z@
+    \ifnum\wsx@partpage=\wsx@pagesbuilt
+      \ifdim\dimexpr\pagetotal-\wsx@partstart+#1\relax<\textheight \nobreak \fi
+    \fi
+  \fi}
+
+% ---------------------------------------------------------------- figures
+% \ExamFigure{<picture>}{<Qn.m>}: picture and caption centred on the part's
+% text block (as in the reference paper), kept together, page break allowed before.
+\def\wsx@prevbaseline{% skip so that the next box top is \wsx@objgap below the last baseline
+  \ifdim\prevdepth>-1000pt \dimen@\prevdepth\else\dimen@\z@\fi
+  \vskip\dimexpr\wsx@objgap-\dimen@\relax
+  \nointerlineskip}
+\newcommand\ExamFigure[2]{%
+  \par
+  \ifnum\wsx@partsdepth>\z@
+    \wsx@figleft\wsx@partindent \wsx@figwidth\dimexpr\textwidth-\wsx@partindent\relax
+  \else
+    \wsx@figleft\z@ \wsx@figwidth\textwidth
+  \fi
+  \setbox\wsx@figbox\hbox{#1}%
+  \setbox\wsx@figbox\hbox{\raise\dp\wsx@figbox\box\wsx@figbox}%
+  \setbox\wsx@capbox\hbox to\wsx@figwidth{\hss\normalfont\normalsize Figure #2\hss}%
+  \ifvmode\ifdim\lastkern=3sp
+    \vskip\wsx@blankline % two figures in a row: one blank line, break allowed
+  \else
+    \wsx@keepwithpart{\wsx@objgap+\ht\wsx@figbox+\wsx@capgap+3bp}%
+  \fi\fi
+  \wsx@prevbaseline
+  \moveright\wsx@figleft\hbox to\wsx@figwidth{\hss\box\wsx@figbox\hss}%
+  \nobreak
+  \vskip\dimexpr\wsx@capgap-\ht\wsx@capbox\relax
+  \nointerlineskip
+  \moveright\wsx@figleft\box\wsx@capbox
+  \wsx@capsig}% the blank line before the next part is the Parts \itemsep
+
+% ---------------------------------------------------------------- answer space
+\ExplSyntaxOn
+\fp_new:N \l__wsx_marks_fp
+\dim_new:N \l__wsx_len_dim
+\cs_new_protected:Npn \__wsx_answer_length:n #1
+  {
+    \fp_zero:N \l__wsx_marks_fp
+    \clist_map_inline:nn {#1} { \fp_add:Nn \l__wsx_marks_fp {##1} }
+    \dim_set:Nn \l__wsx_len_dim { \fp_to_dim:n { \l__wsx_marks_fp * 1.6 * 28.452756 pt } }
+    \dim_compare:nNnT { \l__wsx_len_dim } < { 4cm }
+      { \dim_set:Nn \l__wsx_len_dim { 4cm } }
+    \dim_compare:nNnT { \l__wsx_len_dim } > { 0.95\textheight }
+      { \dim_set:Nn \l__wsx_len_dim { 0.95\textheight } }
+    \dim_gset_eq:NN \wsx@anslen \l__wsx_len_dim
+  }
+\cs_new_eq:NN \wsx@answerlength \__wsx_answer_length:n
+\ExplSyntaxOff
+% \AnswerSpace{<marks>}: invisible, unbreakable box, 1.6 cm per mark, at least
+% 4 cm, at most 95% of the text height; moves to the next page as a whole.
+\newcommand\AnswerSpace[1]{%
+  \par
+  \wsx@answerlength{#1}%
+  \wsx@keepwithpart{\wsx@objgap+\wsx@anslen+27bp}% 27 bp: room for a Total line
+  \wsx@prevbaseline
+  \hbox to\hsize{%
+    \ifwsx@showanswer
+      \hskip\@totalleftmargin
+      \color{black!25}\vrule width .4bp height\wsx@anslen
+      \hfil\vrule width .4bp height\wsx@anslen
+    \else
+      \vrule width\z@ height\wsx@anslen\hfil
+    \fi}%
+  \prevdepth 2.5bp % next baseline 24.2 bp below the space, like after a picture
+  \wsx@anssig}   % breakpoint: this kern + the next glue (or the next \item)
+
+% ---------------------------------------------------------------- end of paper
+\newcommand\EndOfPaper[1]{%
+  \par
+  \vskip\dimexpr 46.46bp-26.7bp\relax  % baseline 46.46 bp below the Total line
+  {\centering\bfseries #1\par}}
+
+% ---------------------------------------------------------------- cover page
+% \ExamCover{<suggested time>}{<course title>}{<date>}{<session>}{<instructions>}
+% Every line sits at the baseline measured on the reference cover; the instruction
+% block (paragraphs separated by \par or a blank line) between two 2.16 bp rules.
+\def\wsx@cline#1{\hbox to\textwidth{\hss\smash{#1}\hss}}
+% \wsx@cpar: like \wsx@cline, but set as a centred paragraph, so that a long
+% \ExamCoverNote wraps onto further centred lines (20.7 bp apart; \par or \\
+% forces a break) instead of running into the margins.  The first baseline is
+% where \wsx@cline puts its line, so a one-line note is unchanged.
+\long\def\wsx@cpar#1{%
+  \setbox\tw@\hbox{\vtop{\hsize\textwidth\linewidth\textwidth
+    \normalfont\normalsize\centering
+    \parskip\z@\baselineskip 20.7bp\lineskiplimit\z@\lineskip 1bp
+    \leavevmode#1\par}}%
+  % smashed by hand (\smash cannot take a \par); the \hbox wrapper keeps the
+  % first baseline on the reference point when the height is set to zero
+  \ht\tw@\z@ \dp\tw@\z@
+  \hbox to\textwidth{\box\tw@\hss}}
+\def\wsx@underline#1{%
+  \setbox\z@\hbox{#1}%
+  \rlap{\vrule width\wd\z@ height-1.32bp depth2.52bp}\box\z@}
+\def\wsx@coverrule{%
+  \moveleft1.44bp\vbox{\hrule width\dimexpr\textwidth+2.88bp\relax height2.16bp}}
+\newcommand\ExamCover[5]{%
+  \clearpage
+  \begingroup
+  \normalfont\normalsize
+  \vbox to\z@{%
+    \offinterlineskip
+    \kern\dimexpr 83.30bp-\wsx@texttop-\topskip\relax
+    \wsx@cline{\bfseries\wsx@underline{Suggested time: #1}}%
+    \kern\dimexpr 190.10bp-83.30bp\relax
+    \wsx@cline{\bfseries SELF-STUDY PRACTICE PAPER}%
+    \kern\dimexpr 243.53bp-190.10bp\relax
+    \wsx@cline{\bfseries #2}%
+    \kern 26.64bp
+    \wsx@cline{\bfseries #3}%
+    \kern 26.76bp
+    \wsx@cline{\bfseries #4}%
+    \kern\dimexpr 333.89bp-296.93bp\relax
+    \wsx@coverrule
+    \setbox\z@\vtop{\hsize\textwidth\linewidth\textwidth
+      \normalfont\normalsize\raggedright
+      \parindent\z@\parskip 6bp\baselineskip 20.7bp\lineskiplimit\z@\lineskip 1bp
+      #5\par\kern-\prevdepth}% depth = first -> last baseline
+    \kern\dimexpr 17.52bp-\ht\z@\relax  % first instruction baseline 17.52 bp below the rule
+    \box\z@
+    \kern 10.32bp
+    \wsx@coverrule
+    \kern\dimexpr 499.03bp-440.11bp\relax
+    \wsx@cpar{\bfseries\ExamCoverNote}%
+    \vss}%
+  \endgroup
+  \clearpage}
+
+% ---------------------------------------------------------------- notation macros of the macro interface
+\providecommand*\vect[1]{\mathbf{#1}}
+\providecommand*\mat[1]{\mathsf{#1}}
+\providecommand*\T{^{\mathsf{T}}}
+
+\endinput

@@ -1,0 +1,27 @@
+%% Paper skeleton for build_paper.py (example: latex-style-exam.sty).
+%% build_paper.py fills the placeholders with Python %%-formatting, so every literal
+%% percent sign in this file is written twice (also those at the line ends below).
+%% Placeholders: %%(note)s %%(time)s %%(date_upper)s %%(date_title)s %%(session)s
+%%   %%(instructions)s %%(inputs)s %%(end_text)s, optionally %%(code)s %%(title)s
+\documentclass[12pt,a4paper]{article}
+\usepackage{latex-style-exam}
+\ExamCourseCode{%(code)s}
+
+\ExamCoverNote{%(note)s\\
+  Not an official examination.}
+
+\begin{document}
+
+\ExamCover{%(time)s}%%
+  {%(title)s}%%
+  {%(date_title)s}%%
+  {%(session)s}%%
+  {%(instructions)s}%%
+  {\item A formula sheet may be used.
+   \item Calculators may be used if they cannot store text, do symbolic algebra or
+     draw graphs.}
+
+%(inputs)s
+
+\EndOfPaper{%(end_text)s}
+\end{document}
